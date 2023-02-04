@@ -33,7 +33,7 @@ trait ZioHttpInterpreter[R] {
     )
 
     Http
-      .fromOptionalHandlerZIO[Request] { req =>
+      .fromHandler(Handler.fromFunctionZIO[Request] { req =>
         interpreter
           .apply(ZioHttpServerRequest(req))
           .foldZIO(
@@ -48,18 +48,18 @@ trait ZioHttpInterpreter[R] {
                 }
 
                 ZIO.succeed(
-                  Handler.response(
-                    Response(
-                      status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-                      headers = ZioHttpHeaders(allHeaders),
-                      body = resp.body.map { case (stream, _) => Body.fromStream(stream) }.getOrElse(Body.empty)
-                    )
+                  Response(
+                    status = Status.fromHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
+                    headers = ZioHttpHeaders(allHeaders),
+                    body = resp.body
+                      .map { case (stream, _) => Body.fromStream(stream) }
+                      .getOrElse(Body.empty)
                   )
                 )
               case RequestResult.Failure(_) => ZIO.fail(None)
             }
           )
-      }
+      })
       .withDefaultErrorResponse
   }
 
